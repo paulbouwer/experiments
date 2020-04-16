@@ -617,6 +617,8 @@ $ cat aadpodidentitybinding.yaml \
 
 Create the **secret-provider-class.yaml** file with the following contents. This specifies that the **azure provider** will be used and defines the **secrets** that will be fetched from Azure Key Vault.
 
+> We should NOT have to specify `resourceGroup` and `subscriptionId` in the `SecretProviderClass` for version `0.0.4` of the Azure Provider. Currently you will get an error unless you include them when using a Managed Identity provisioned AKS Cluster.
+
 ```yaml
 # secret-provider-class.yaml
 apiVersion: secrets-store.csi.x-k8s.io/v1alpha1

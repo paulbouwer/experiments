@@ -460,19 +460,8 @@ metadata:
 
 Install the Azure Key Vault Provider for Secret Store CSI Driver.
 
-We need at least version `0.0.4` of the Azure Provider, so we'll grab the required yaml first. This part will become easier once there is a consolidated Helm Chart for the Secrets Store CSI Driver and Azure Provider.
-
 ```
-$ AZUREPROVIDER_VERSION=0.0.4
-$ curl -L https://github.com/Azure/secrets-store-csi-driver-provider-azure/archive/$AZUREPROVIDER_VERSION.tar.gz \
-    | tar xzO secrets-store-csi-driver-provider-azure-$AZUREPROVIDER_VERSION/deployment/provider-azure-installer.yaml \
-    > provider-azure-installer.yaml
-```
-
-Install the Azure Provider now.
-
-```
-$ kubectl apply -f ./provider-azure-installer.yaml --namespace security
+$ kubectl apply -f https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/deployment/provider-azure-installer.yaml --namespace security
 ```
 
 Verify that the pods are running.
@@ -617,8 +606,6 @@ $ cat aadpodidentitybinding.yaml \
 
 Create the **secret-provider-class.yaml** file with the following contents. This specifies that the **azure provider** will be used and defines the **secrets** that will be fetched from Azure Key Vault.
 
-> We should NOT have to specify `resourceGroup` and `subscriptionId` in the `SecretProviderClass` for version `0.0.4` of the Azure Provider. Currently you will get an error unless you include them when using a Managed Identity provisioned AKS Cluster.
-
 ```yaml
 # secret-provider-class.yaml
 apiVersion: secrets-store.csi.x-k8s.io/v1alpha1
@@ -640,21 +627,16 @@ spec:
           objectName: ClientSecret
           objectType: secret
           objectVersion: ""
-    resourceGroup: {{AKS_NODE_RESOURCEGROUP}}
-    subscriptionId: {{AZURE_SUBSCRIPTIONID}}
     tenantId: {{AZURE_TENANTID}}
 ```
 
 Substitute appropriate values for your environment into the **secret-provider-class.yaml** file and deploy the workload into AKS.
 
 ```
-$ read AZURE_SUBSCRIPTIONID AZURE_TENANTID <<< $( az account show \
-  --query '{SubscriptionId:id,TenantId:tenantId}' -o tsv)
+$ AZURE_TENANTID=$(az account show --query 'tenantId' -o tsv)
 
 $ cat secret-provider-class.yaml \
   | sed -e s/{{KEYVAULT_NAME}}/$KEYVAULT_NAME/ \
-  | sed -e s/{{AKS_NODE_RESOURCEGROUP}}/$AKS_NODE_RESOURCEGROUP/ \
-  | sed -e s/{{AZURE_SUBSCRIPTIONID}}/$AZURE_SUBSCRIPTIONID/ \
   | sed -e s/{{AZURE_TENANTID}}/$AZURE_TENANTID/ \
   | kubectl apply -n demo-secrets -f -
 ```

@@ -16,7 +16,7 @@ This provides additional details around the installation steps. It includes vali
 
 You will require the following to use this guidance.
 
-- AKS 1.16+ (clusters created with --enable-managed-identity not currently supported)
+- AKS 1.16+
 - Bash, Git
 - Azure CLI 2.2.0+
 - kubectl 1.16+

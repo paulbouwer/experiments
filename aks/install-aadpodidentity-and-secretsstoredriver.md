@@ -33,18 +33,19 @@ kubectl create ns security
 Install AAD Pod Identity.
 
 ```
-$ helm repo add aad-pod-identity https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts
-$ helm install aad-pod-identity aad-pod-identity/aad-pod-identity --namespace security --version 1.5.6
+helm repo add aad-pod-identity https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts
+
+helm install aad-pod-identity aad-pod-identity/aad-pod-identity --namespace security --version 2.0.1
 ```
 
 Install the Secrets Store CSI Driver with Azure Key Vault Provider.
 
 ```
-$ git clone https://github.com/kubernetes-sigs/secrets-store-csi-driver
-$ cd secrets-store-csi-driver
+git clone https://github.com/kubernetes-sigs/secrets-store-csi-driver
+cd secrets-store-csi-driver
 
-$ helm install csi-secrets-store charts/secrets-store-csi-driver --namespace security
-$ kubectl apply -f https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/deployment/provider-azure-installer.yaml --namespace security
+helm install csi-secrets-store charts/secrets-store-csi-driver --namespace security
+kubectl apply -f https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/deployment/provider-azure-installer.yaml --namespace security
 ```
 
 Done.
@@ -67,21 +68,23 @@ If you have installed your AKS cluster with the `--enable-managed-identity` flag
 Obtain the ClientId of the System Assigned Managed Identity in your AKS Cluster. You will also need some details about the Resource Group that contains the node resources.
 
 ```
-$ AKS_NAME=<YOUR_AKS_CLUSTER_NAME>
-$ AKS_RESOURCEGROUP=<YOUR_AKS_CLUSTER_RESOURCEGROUP>
+AKS_NAME=<YOUR_AKS_CLUSTER_NAME>
+AKS_RESOURCEGROUP=<YOUR_AKS_CLUSTER_RESOURCEGROUP>
 
-$ read AKS_MSI_CLIENTID AKS_NODE_RESOURCEGROUP <<< $(az aks show \
+read AKS_MSI_CLIENTID AKS_NODE_RESOURCEGROUP <<< $(az aks show \
   -n $AKS_NAME -g $AKS_RESOURCEGROUP \
   --query "{ClientId:identityProfile.kubeletidentity.clientId,ResourceGroup:nodeResourceGroup}" \
   -o tsv)
-$ AKS_NODE_RESOURCEGROUPID=$(az group show -n $AKS_NODE_RESOURCEGROUP --query "id" -o tsv)
+
+AKS_NODE_RESOURCEGROUPID=$(az group show -n $AKS_NODE_RESOURCEGROUP --query "id" -o tsv)
 ```
 
 Assign the following roles to the System Assigned Managed Identity within the scope of the node resources Resource Group. This will authorise assignment/removal of managed identities on the VM/VMSS node resources.
 
 ```
-$ az role assignment create --role "Virtual Machine Contributor" --assignee $AKS_MSI_CLIENTID --scope $AKS_NODE_RESOURCEGROUPID
-$ az role assignment create --role "Managed Identity Operator" --assignee $AKS_MSI_CLIENTID --scope $AKS_NODE_RESOURCEGROUPID
+az role assignment create --role "Virtual Machine Contributor" --assignee $AKS_MSI_CLIENTID --scope $AKS_NODE_RESOURCEGROUPID
+
+az role assignment create --role "Managed Identity Operator" --assignee $AKS_MSI_CLIENTID --scope $AKS_NODE_RESOURCEGROUPID
 ```
 
 **Create a namespace**
@@ -89,59 +92,59 @@ $ az role assignment create --role "Managed Identity Operator" --assignee $AKS_M
 Create a namespace for the AAD Pod Identity components.
 
 ```
-$ kubectl create ns security
+kubectl create ns security
 ```
 
 **Install**
 
-Install the AAD Pod Identity Helm Chart using Helm 3. You can ignore the `skipping unknown hook: "crd-install"` errors, which are as a result of this chart still also supporting Helm 2 users. Helm 3 does not use the crd hooks.
+Install the AAD Pod Identity Helm Chart using Helm 3.
 
 ```
-$ helm repo add aad-pod-identity https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts
+helm repo add aad-pod-identity https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts
 
-$ helm install aad-pod-identity aad-pod-identity/aad-pod-identity --namespace security --version 1.5.6
-manifest_sorter.go:192: info: skipping unknown hook: "crd-install"
-manifest_sorter.go:192: info: skipping unknown hook: "crd-install"
-manifest_sorter.go:192: info: skipping unknown hook: "crd-install"
-manifest_sorter.go:192: info: skipping unknown hook: "crd-install"
+helm install aad-pod-identity aad-pod-identity/aad-pod-identity --namespace security --version 2.0.1
+
 NAME: aad-pod-identity
-LAST DEPLOYED: Wed Apr 15 23:32:12 2020
+LAST DEPLOYED: Sun Aug 30 23:29:51 2020
 NAMESPACE: security
 STATUS: deployed
 REVISION: 1
 TEST SUITE: None
 ```
 
-Check that AAD Pod Identity is installed correctly 
+Check that AAD Pod Identity is installed correctly.
 
 ```
-$ helm ls -n security
+helm ls -n security
+
 NAME                    NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
-aad-pod-identity        security        1               2020-04-15 23:32:12.9437813 +0000 UTC   deployed        aad-pod-identity-1.5.6  1.5.5
+aad-pod-identity        security        1               2020-08-30 23:29:51.8353939 +0000 UTC   deployed        aad-pod-identity-2.0.1  1.6.2
 
-$ kubectl get crd -l 'app.kubernetes.io/name=aad-pod-identity'
+kubectl get crd -l 'app.kubernetes.io/name=aad-pod-identity'
+
 NAME                                               CREATED AT
-azureassignedidentities.aadpodidentity.k8s.io      2020-04-15T23:32:07Z
-azureidentities.aadpodidentity.k8s.io              2020-04-15T23:32:07Z
-azureidentitybindings.aadpodidentity.k8s.io        2020-04-15T23:32:07Z
-azurepodidentityexceptions.aadpodidentity.k8s.io   2020-04-15T23:32:07Z
+azureassignedidentities.aadpodidentity.k8s.io      2020-08-30T23:19:05Z
+azureidentities.aadpodidentity.k8s.io              2020-08-30T23:19:05Z
+azureidentitybindings.aadpodidentity.k8s.io        2020-08-30T23:19:05Z
+azurepodidentityexceptions.aadpodidentity.k8s.io   2020-08-30T23:19:05Z
 
-$ kubectl get all -n security
+kubectl get all -n security
+
 NAME                                       READY   STATUS    RESTARTS   AGE
-pod/aad-pod-identity-mic-b879b8d44-24m6r   1/1     Running   0          61s
-pod/aad-pod-identity-mic-b879b8d44-w65z4   1/1     Running   0          61s
-pod/aad-pod-identity-nmi-qdwsj             1/1     Running   0          61s
-pod/aad-pod-identity-nmi-qwgnm             1/1     Running   0          61s
-pod/aad-pod-identity-nmi-sjr5v             1/1     Running   0          61s
+pod/aad-pod-identity-mic-8dbdf5df9-6gm5h   1/1     Running   0          2m37s
+pod/aad-pod-identity-mic-8dbdf5df9-d7527   1/1     Running   0          2m37s
+pod/aad-pod-identity-nmi-clxl4             1/1     Running   0          2m37s
+pod/aad-pod-identity-nmi-lv64x             1/1     Running   0          2m37s
+pod/aad-pod-identity-nmi-vgv97             1/1     Running   0          2m37s
 
-NAME                                  DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR                 AGE
-daemonset.apps/aad-pod-identity-nmi   3         3         3       3            3           beta.kubernetes.io/os=linux   62s
+NAME                                  DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+daemonset.apps/aad-pod-identity-nmi   3         3         3       3            3           kubernetes.io/os=linux   2m38s
 
 NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/aad-pod-identity-mic   2/2     2            2           62s
+deployment.apps/aad-pod-identity-mic   2/2     2            2           2m38s
 
 NAME                                             DESIRED   CURRENT   READY   AGE
-replicaset.apps/aad-pod-identity-mic-b879b8d44   2         2         2       62s
+replicaset.apps/aad-pod-identity-mic-8dbdf5df9   2         2         2       2m38s
 ```
 
 **Uninstall**
@@ -149,9 +152,11 @@ replicaset.apps/aad-pod-identity-mic-b879b8d44   2         2         2       62s
 To uninstall/delete the AAD Pod Identity deployment:
 
 ```
-$ helm uninstall aad-pod-identity -n security
-$ kubectl delete namespace security
-$ kubectl get crd -l 'app.kubernetes.io/name=aad-pod-identity' \
+helm uninstall aad-pod-identity -n security
+
+kubectl delete namespace security
+
+kubectl get crd -l 'app.kubernetes.io/name=aad-pod-identity' \
   -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
   | xargs -P 10 -I {} kubectl delete crd {}
 ```
@@ -171,7 +176,7 @@ Additional details for this validation demo can be found in the following GitHub
 Create a namespace for the demo components.
 
 ```
-$ kubectl create ns demo-identity
+kubectl create ns demo-identity
 ```
 
 **Create an Azure Identity**
@@ -179,15 +184,15 @@ $ kubectl create ns demo-identity
 Create the Azure Identity that will be used by the demo workload to communicate with Azure resources and assign it the role that provides the appropriate level of access to those resources. The Azure Identity in this demo will be given the Reader role scoped at the node resources Resource Group level.
 
 ```
-$ AKS_NAME=<YOUR_AKS_CLUSTER_NAME>
-$ AKS_NODE_RESOURCEGROUP=$(az aks list --query "[?name == '$AKS_NAME'].nodeResourceGroup" -o tsv)
-$ AKS_NODE_RESOURCEGROUP_RESOURCEID=$(az group show -n $AKS_NODE_RESOURCEGROUP --query "id" -o tsv)
+AKS_NAME=<YOUR_AKS_CLUSTER_NAME>
+AKS_NODE_RESOURCEGROUP=$(az aks list --query "[?name == '$AKS_NAME'].nodeResourceGroup" -o tsv)
+AKS_NODE_RESOURCEGROUP_RESOURCEID=$(az group show -n $AKS_NODE_RESOURCEGROUP --query "id" -o tsv)
 
-$ AZUREIDENTITY_PRINCIPALID=$(az identity create --name demo-identity \
+AZUREIDENTITY_PRINCIPALID=$(az identity create --name demo-identity \
   --resource-group $AKS_NODE_RESOURCEGROUP --query 'principalId' -o tsv)
 
 # If you get an error with this step, the Azure Identity may not have propagated yet. Wait a few seconds, and try again. 
-$ az role assignment create --role Reader \
+az role assignment create --role Reader \
   --assignee $AZUREIDENTITY_PRINCIPALID --scope $AKS_NODE_RESOURCEGROUP_RESOURCEID
 ```
 
@@ -198,14 +203,15 @@ If you have installed your AKS cluster with the `--enable-managed-identity` flag
 Obtain the ClientId of the System Assigned Managed Identity in your AKS Cluster, and the ResourceId for the Azure Identity you just created.
 
 ```
-$ AKS_MSI_CLIENTID=$(az aks show -n $AKS_NAME -g $AKS_RESOURCEGROUP --query "identityProfile.kubeletidentity.clientId" -o tsv)
-$ AZUREIDENTITY_RESOURCEID=$(az identity show --name demo-identity --resource-group $AKS_NODE_RESOURCEGROUP --query "id" -o tsv)
+AKS_MSI_CLIENTID=$(az aks show -n $AKS_NAME -g $AKS_RESOURCEGROUP --query "identityProfile.kubeletidentity.clientId" -o tsv)
+
+AZUREIDENTITY_RESOURCEID=$(az identity show --name demo-identity --resource-group $AKS_NODE_RESOURCEGROUP --query "id" -o tsv)
 ```
 
 Assign the following role to the System Assigned Managed Identity within the scope of the Azure Identity just created. This will authorise assignment/removal of this Azure Identity on the VM/VMSS node resources.
 
 ```
-$ az role assignment create --role "Managed Identity Operator" --assignee $AKS_MSI_CLIENTID --scope $AZUREIDENTITY_RESOURCEID
+az role assignment create --role "Managed Identity Operator" --assignee $AKS_MSI_CLIENTID --scope $AZUREIDENTITY_RESOURCEID
 ```
 
 **Configure and deploy workload**
@@ -213,8 +219,9 @@ $ az role assignment create --role "Managed Identity Operator" --assignee $AKS_M
 Obtain the SubscriptionId and the Azure Identity ClientId.
 
 ```
-$ SUBSCRIPTION_ID=$(az account show --query "id" -o tsv)
-$ AZUREIDENTITY_CLIENTID=$(az identity show -n demo-identity -g $AKS_NODE_RESOURCEGROUP \
+SUBSCRIPTION_ID=$(az account show --query "id" -o tsv)
+
+AZUREIDENTITY_CLIENTID=$(az identity show -n demo-identity -g $AKS_NODE_RESOURCEGROUP \
   --query "clientId" -o tsv)
 ```
 
@@ -268,21 +275,22 @@ spec:
 Substitute the appropriate values for your environment into the **deployment.yaml** file, and deploy the workload into AKS.
 
 ```
-$ cat deployment.yaml \
+cat deployment.yaml \
   | sed -e s/{{SUBSCRIPTION_ID}}/$SUBSCRIPTION_ID/ \
   | sed -e s/{{AZUREIDENTITY_CLIENTID}}/$AZUREIDENTITY_CLIENTID/ \
   | sed -e s/{{AKS_NODE_RESOURCEGROUP}}/$AKS_NODE_RESOURCEGROUP/ \
   | kubectl apply -n demo-identity -f -
 
-$ kubectl get all -n demo-identity
+kubectl get all -n demo-identity
+
 NAME                        READY   STATUS    RESTARTS   AGE
-pod/demo-5d7c78cbb5-mqrbw   1/1     Running   0          8s
+pod/demo-5fd48d6c77-sgpfb   1/1     Running   0          66s
 
 NAME                   READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/demo   1/1     1            1           9s
+deployment.apps/demo   1/1     1            1           66s
 
 NAME                              DESIRED   CURRENT   READY   AGE
-replicaset.apps/demo-5d7c78cbb5   1         1         1       9s
+replicaset.apps/demo-5fd48d6c77   1         1         1       66s
 ```
 
 **Create AzureIdentity and AzureIdentityBinding resources**
@@ -290,7 +298,7 @@ replicaset.apps/demo-5d7c78cbb5   1         1         1       9s
 Obtain the Resource Id and Client Id from the Azure Identity.
 
 ```
-$ read AZUREIDENTITY_RESOURCEID AZUREIDENTITY_CLIENTID <<< $(az identity show \
+read AZUREIDENTITY_RESOURCEID AZUREIDENTITY_CLIENTID <<< $(az identity show \
   -n demo-identity -g $AKS_NODE_RESOURCEGROUP \
   --query "{ResourceId:id,ClientId:clientId}" -o tsv)
 ```
@@ -305,14 +313,14 @@ metadata:
  name: demo-identity
 spec:
  type: 0
- ResourceID: {{AZUREIDENTITY_RESOURCEID}}
- ClientID: {{AZUREIDENTITY_CLIENTID}}
+ resourceID: {{AZUREIDENTITY_RESOURCEID}}
+ clientID: {{AZUREIDENTITY_CLIENTID}}
 ```
 
 Substitute appropriate values for your environment into the **aadpodidentity.yaml** file and deploy the workload into AKS.
 
 ```
-$ cat aadpodidentity.yaml \
+cat aadpodidentity.yaml \
   | sed -e s#{{AZUREIDENTITY_RESOURCEID}}#$AZUREIDENTITY_RESOURCEID# \
   | sed -e s/{{AZUREIDENTITY_CLIENTID}}/$AZUREIDENTITY_CLIENTID/ \
   | kubectl apply -n demo-identity -f -
@@ -327,14 +335,14 @@ kind: AzureIdentityBinding
 metadata:
   name: demo-azure-id-binding
 spec: 
-  AzureIdentity: {{AZUREIDENTITY_NAME}}
-  Selector: {{POD_LABEL_SELECTOR}}
+  azureIdentity: {{AZUREIDENTITY_NAME}}
+  selector: {{POD_LABEL_SELECTOR}}
 ```
 
 Substitute appropriate values for your environment into the **aadpodidentitybinding.yaml** file and deploy the workload into AKS. This binds the previously defined Azure Identity **demo-identity** to all pods with the label **aadpodidbinding: demo**.
 
 ```
-$ cat aadpodidentitybinding.yaml \
+cat aadpodidentitybinding.yaml \
   | sed -e s/{{AZUREIDENTITY_NAME}}/demo-identity/ \
   | sed -e s/{{POD_LABEL_SELECTOR}}/demo/ \
   | kubectl apply -n demo-identity -f -
@@ -345,22 +353,24 @@ $ cat aadpodidentitybinding.yaml \
 The workload deployed via the **deployment.yaml** file is running.
 
 ```
-$ kubectl get pods -n demo-identity
+kubectl get pods -n demo-identity
+
 NAME                    READY   STATUS    RESTARTS   AGE
-demo-5d7c78cbb5-mqrbw   1/1     Running   0          47s
+demo-5fd48d6c77-sgpfb   1/1     Running   0          27m
 ```
 
 You should see log messages from the demo pod about successfully acquiring tokens and results from queries to the Azure Metadata endpoint.
 
 ```
-$ kubectl logs -n demo-identity -l aadpodidbinding=demo -l app=demo -f
+kubectl logs -n demo-identity -l aadpodidbinding=demo -l app=demo -f
 ```
 
 You should see related logs in the MIC and NMI components of AAD Pod Identity.
 
 ```
-$ kubectl logs -n security -l app.kubernetes.io/component=mic --prefix
-$ kubectl logs -n security -l app.kubernetes.io/component=nmi --prefix
+kubectl logs -n security -l app.kubernetes.io/component=mic --prefix
+
+kubectl logs -n security -l app.kubernetes.io/component=nmi --prefix
 ```
 
 **Uninstall**
@@ -368,8 +378,9 @@ $ kubectl logs -n security -l app.kubernetes.io/component=nmi --prefix
 To uninstall/delete the validation demo run the following. This will leave the aad-pod-identity component intact:
 
 ```
-$ kubectl delete ns demo-identity
-$ az identity delete --name demo-identity --resource-group $AKS_NODE_RESOURCEGROUP
+kubectl delete ns demo-identity
+
+az identity delete --name demo-identity --resource-group $AKS_NODE_RESOURCEGROUP
 ```
 
 ### Installing Secrets Store CSI Driver with Azure Key Vault Provider
